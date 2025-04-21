@@ -1,0 +1,811 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": []
+    },
+    "kernelspec": {
+      "name": "ir",
+      "display_name": "R"
+    },
+    "language_info": {
+      "name": "R"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "source": [
+        "# <center>Escuela Militar de Ingeniería</center>\n",
+        "<center>Ingeniería de Sistemas</center>\n",
+        "<center><img src=\"https://i.servimg.com/u/f73/20/03/60/99/logo_i12.jpg\" width=\"300\"></center>\n",
+        "<center>Estudiante: Zalles Merino Izai Alejandro</center>\n",
+        "<center>Código SAGA: A27006-7</center>\n",
+        "\n",
+        "## <center>Docente: Ing. Angela Santos</center>\n",
+        "## Fecha: 11 de Abril de 2025"
+      ],
+      "metadata": {
+        "id": "t6-NZOePxwqH"
+      }
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 4,
+      "metadata": {
+        "id": "i-JpKEgqt66_"
+      },
+      "outputs": [],
+      "source": [
+        "# Simulación Monte Carlo - Peluquería\n",
+        "# ==================================\n",
+        "# Instalar paquetes necesarios\n",
+        "if (!require(\"knitr\")) install.packages(\"knitr\", quiet = TRUE)\n",
+        "if (!require(\"ggplot2\")) install.packages(\"ggplot2\", quiet = TRUE)\n",
+        "library(knitr)\n",
+        "library(ggplot2)"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Paso 1: Tablas iniciales con datos del problema\n",
+        "# ----------------------------------------------\n",
+        "\n",
+        "# Tabla de tiempos entre llegadas\n",
+        "tiemposLlegada <- c(\"2-4\", \"4-6\", \"6-8\", \"8-10\", \"10-12\", \"12-14\", \"14-16\", \"16-18\", \"18-20\")\n",
+        "frecuenciaLlegada <- c(10, 15, 20, 35, 50, 40, 20, 5, 5)\n",
+        "frecRelLlegada <- frecuenciaLlegada / sum(frecuenciaLlegada)\n",
+        "frecAcumLlegada <- cumsum(frecRelLlegada)\n"
+      ],
+      "metadata": {
+        "id": "ITL0PLyjwqcf"
+      },
+      "execution_count": 5,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "\n",
+        "# Representación numérica de los rangos (punto medio de cada intervalo)\n",
+        "puntoMedioLlegada <- c(3, 5, 7, 9, 11, 13, 15, 17, 19)\n",
+        "\n"
+      ],
+      "metadata": {
+        "id": "EaHHj43PwuWT"
+      },
+      "execution_count": 6,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Tabla de tiempos de servicio\n",
+        "tiemposServicio <- c(\"5-15\", \"15-25\", \"25-35\", \"35-45\", \"45-55\")\n",
+        "probabilidadServicio <- c(0.10, 0.35, 0.30, 0.15, 0.10)\n",
+        "probAcumServicio <- cumsum(probabilidadServicio)\n",
+        "\n"
+      ],
+      "metadata": {
+        "id": "YkROuLwVwxIy"
+      },
+      "execution_count": 7,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Representación numérica de los rangos (punto medio de cada intervalo)\n",
+        "puntoMedioServicio <- c(10, 20, 30, 40, 50)\n",
+        "\n"
+      ],
+      "metadata": {
+        "id": "vOacA0qAw0K6"
+      },
+      "execution_count": 8,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Crear y mostrar las tablas\n",
+        "tablaLlegadas <- data.frame(\n",
+        "  TiempoLlegada = tiemposLlegada,\n",
+        "  FrecuenciaAbs = frecuenciaLlegada,\n",
+        "  FrecuenciaRel = round(frecRelLlegada, 4),\n",
+        "  FrecuenciaAcum = round(frecAcumLlegada, 4),\n",
+        "  PuntoMedio = puntoMedioLlegada,\n",
+        "  Intervalo = paste0(sprintf(\"%.4f\", c(0, head(frecAcumLlegada, -1))),\n",
+        "                     \" - \",\n",
+        "                     sprintf(\"%.4f\", frecAcumLlegada - 0.0001))\n",
+        ")\n",
+        "\n",
+        "tablaServicio <- data.frame(\n",
+        "  TiempoServicio = tiemposServicio,\n",
+        "  Probabilidad = probabilidadServicio,\n",
+        "  ProbabilidadAcum = probAcumServicio,\n",
+        "  PuntoMedio = puntoMedioServicio,\n",
+        "  Intervalo = paste0(sprintf(\"%.4f\", c(0, head(probAcumServicio, -1))),\n",
+        "                     \" - \",\n",
+        "                     sprintf(\"%.4f\", probAcumServicio - 0.0001))\n",
+        ")\n",
+        "\n"
+      ],
+      "metadata": {
+        "id": "7HxQIlqCw4Lt"
+      },
+      "execution_count": 9,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Mostrar tablas con formato mejorado\n",
+        "ImprimirTabla <- function(titulo, tabla) {\n",
+        "  cat(\"\\n\\n\", paste(rep(\"=\", 80), collapse = \"\"), \"\\n\")\n",
+        "  cat(\"🟦\", titulo, \"\\n\")\n",
+        "  cat(paste(rep(\"-\", 80), collapse = \"\"), \"\\n\\n\")\n",
+        "  print(kable(tabla, format = \"pipe\", align = \"c\"))\n",
+        "}\n",
+        "\n",
+        "ImprimirTabla(\"Tabla 1: Distribución de tiempos entre llegadas\", tablaLlegadas)\n",
+        "ImprimirTabla(\"Tabla 2: Distribución de tiempos de servicio\", tablaServicio)\n",
+        "\n"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "uwEaMkm5w7XA",
+        "outputId": "8a29f14b-b77a-4de7-9a76-694c14ea507f"
+      },
+      "execution_count": 10,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "\n",
+            "\n",
+            " ================================================================================ \n",
+            "🟦 Tabla 1: Distribución de tiempos entre llegadas \n",
+            "-------------------------------------------------------------------------------- \n",
+            "\n",
+            "\n",
+            "\n",
+            "| TiempoLlegada | FrecuenciaAbs | FrecuenciaRel | FrecuenciaAcum | PuntoMedio |    Intervalo    |\n",
+            "|:-------------:|:-------------:|:-------------:|:--------------:|:----------:|:---------------:|\n",
+            "|      2-4      |      10       |     0.050     |     0.050      |     3      | 0.0000 - 0.0499 |\n",
+            "|      4-6      |      15       |     0.075     |     0.125      |     5      | 0.0500 - 0.1249 |\n",
+            "|      6-8      |      20       |     0.100     |     0.225      |     7      | 0.1250 - 0.2249 |\n",
+            "|     8-10      |      35       |     0.175     |     0.400      |     9      | 0.2250 - 0.3999 |\n",
+            "|     10-12     |      50       |     0.250     |     0.650      |     11     | 0.4000 - 0.6499 |\n",
+            "|     12-14     |      40       |     0.200     |     0.850      |     13     | 0.6500 - 0.8499 |\n",
+            "|     14-16     |      20       |     0.100     |     0.950      |     15     | 0.8500 - 0.9499 |\n",
+            "|     16-18     |       5       |     0.025     |     0.975      |     17     | 0.9500 - 0.9749 |\n",
+            "|     18-20     |       5       |     0.025     |     1.000      |     19     | 0.9750 - 0.9999 |\n",
+            "\n",
+            "\n",
+            " ================================================================================ \n",
+            "🟦 Tabla 2: Distribución de tiempos de servicio \n",
+            "-------------------------------------------------------------------------------- \n",
+            "\n",
+            "\n",
+            "\n",
+            "| TiempoServicio | Probabilidad | ProbabilidadAcum | PuntoMedio |    Intervalo    |\n",
+            "|:--------------:|:------------:|:----------------:|:----------:|:---------------:|\n",
+            "|      5-15      |     0.10     |       0.10       |     10     | 0.0000 - 0.0999 |\n",
+            "|     15-25      |     0.35     |       0.45       |     20     | 0.1000 - 0.4499 |\n",
+            "|     25-35      |     0.30     |       0.75       |     30     | 0.4500 - 0.7499 |\n",
+            "|     35-45      |     0.15     |       0.90       |     40     | 0.7500 - 0.8999 |\n",
+            "|     45-55      |     0.10     |       1.00       |     50     | 0.9000 - 0.9999 |\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Paso 2: Funciones para clasificar los tiempos basados en números aleatorios\n",
+        "# -------------------------------------------------------------------------\n",
+        "\n",
+        "# Función para determinar el tiempo entre llegadas\n",
+        "ObtenerTiempoLlegada <- function(aleatorio) {\n",
+        "  for (i in 1:length(frecAcumLlegada)) {\n",
+        "    if (aleatorio <= frecAcumLlegada[i]) {\n",
+        "      return(puntoMedioLlegada[i])\n",
+        "    }\n",
+        "  }\n",
+        "  return(puntoMedioLlegada[length(puntoMedioLlegada)])\n",
+        "}\n",
+        "\n"
+      ],
+      "metadata": {
+        "id": "Il9jZcpSw9yD"
+      },
+      "execution_count": 11,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Función para determinar el tiempo de servicio\n",
+        "ObtenerTiempoServicio <- function(aleatorio) {\n",
+        "  for (i in 1:length(probAcumServicio)) {\n",
+        "    if (aleatorio <= probAcumServicio[i]) {\n",
+        "      return(puntoMedioServicio[i])\n",
+        "    }\n",
+        "  }\n",
+        "  return(puntoMedioServicio[length(puntoMedioServicio)])\n",
+        "}\n",
+        "\n"
+      ],
+      "metadata": {
+        "id": "4xwnYW0KxAvg"
+      },
+      "execution_count": 12,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Paso 3: Simulación de llegadas\n",
+        "# ----------------------------\n",
+        "set.seed(42) # Para reproducibilidad\n",
+        "numClientes <- 100\n",
+        "aleatoriosLlegada <- runif(numClientes)\n",
+        "tiemposEntreLlegadas <- sapply(aleatoriosLlegada, ObtenerTiempoLlegada)\n",
+        "\n"
+      ],
+      "metadata": {
+        "id": "wJymyFpmxDUb"
+      },
+      "execution_count": 13,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Calcular los tiempos absolutos de llegada (acumulativo)\n",
+        "tiemposLlegadaAbsolutos <- cumsum(tiemposEntreLlegadas)\n",
+        "\n"
+      ],
+      "metadata": {
+        "id": "G3Hr1NZsxFsr"
+      },
+      "execution_count": 14,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Paso 4: Simulación de servicios para cada cliente\n",
+        "# -----------------------------------------------\n",
+        "aleatoriosServicio <- runif(numClientes)\n",
+        "tiemposDeServicio <- sapply(aleatoriosServicio, ObtenerTiempoServicio)\n",
+        "\n"
+      ],
+      "metadata": {
+        "id": "IVn6lMl5xIVy"
+      },
+      "execution_count": 15,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Mostrar simulación de llegada y servicio de clientes\n",
+        "tablaSimulacionLlegadas <- data.frame(\n",
+        "  Cliente = 1:numClientes,\n",
+        "  Aleatorio = round(aleatoriosLlegada, 4),\n",
+        "  TiempoEntreLlegadas = tiemposEntreLlegadas,\n",
+        "  TiempoLlegada = tiemposLlegadaAbsolutos,\n",
+        "  AleatorioServicio = round(aleatoriosServicio, 4),\n",
+        "  TiempoServicio = tiemposDeServicio\n",
+        ")\n",
+        "\n",
+        "ImprimirTabla(\"Tabla 3: Simulación de llegadas y tiempos de servicio (primeros 10 clientes)\",\n",
+        "             head(tablaSimulacionLlegadas, 10))\n",
+        "\n"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "IvZ9af7KxKrx",
+        "outputId": "1357237a-2b23-4abf-9f0a-b0192cac3d82"
+      },
+      "execution_count": 16,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "\n",
+            "\n",
+            " ================================================================================ \n",
+            "🟦 Tabla 3: Simulación de llegadas y tiempos de servicio (primeros 10 clientes) \n",
+            "-------------------------------------------------------------------------------- \n",
+            "\n",
+            "\n",
+            "\n",
+            "| Cliente | Aleatorio | TiempoEntreLlegadas | TiempoLlegada | AleatorioServicio | TiempoServicio |\n",
+            "|:-------:|:---------:|:-------------------:|:-------------:|:-----------------:|:--------------:|\n",
+            "|    1    |  0.9148   |         15          |      15       |      0.6262       |       30       |\n",
+            "|    2    |  0.9371   |         15          |      30       |      0.2172       |       20       |\n",
+            "|    3    |  0.2861   |          9          |      39       |      0.2166       |       20       |\n",
+            "|    4    |  0.8304   |         13          |      52       |      0.3889       |       20       |\n",
+            "|    5    |  0.6417   |         11          |      63       |      0.9425       |       50       |\n",
+            "|    6    |  0.5191   |         11          |      74       |      0.9626       |       50       |\n",
+            "|    7    |  0.7366   |         13          |      87       |      0.7399       |       30       |\n",
+            "|    8    |  0.1347   |          7          |      94       |      0.7332       |       30       |\n",
+            "|    9    |  0.6570   |         13          |      107      |      0.5358       |       30       |\n",
+            "|   10    |  0.7051   |         13          |      120      |      0.0023       |       10       |\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Paso 5: Simulación con 2 peluqueros\n",
+        "# ---------------------------------\n",
+        "\n",
+        "SimularConDosPeluqueros <- function(tiemposLlegada, tiemposServicio, numClientes) {\n",
+        "  # Inicializar variables\n",
+        "  peluquero1DisponibleEn <- 0\n",
+        "  peluquero2DisponibleEn <- 0\n",
+        "  tiemposEspera <- numeric(numClientes)\n",
+        "  tiemposFinalizacion <- numeric(numClientes)\n",
+        "  peluqueroAsignado <- character(numClientes)\n",
+        "\n",
+        "  # Simular para 2 peluqueros\n",
+        "  for (i in 1:numClientes) {\n",
+        "    llegada <- tiemposLlegada[i]\n",
+        "    servicio <- tiemposServicio[i]\n",
+        "\n",
+        "    # Determinar qué peluquero atenderá al cliente\n",
+        "    if (peluquero1DisponibleEn <= llegada) {\n",
+        "      # El peluquero 1 está libre y puede atender inmediatamente\n",
+        "      tiemposEspera[i] <- 0\n",
+        "      inicioServicio <- llegada\n",
+        "      peluquero1DisponibleEn <- llegada + servicio\n",
+        "      tiemposFinalizacion[i] <- peluquero1DisponibleEn\n",
+        "      peluqueroAsignado[i] <- \"Peluquero 1\"\n",
+        "    } else if (peluquero2DisponibleEn <= llegada) {\n",
+        "      # El peluquero 2 está libre y puede atender inmediatamente\n",
+        "      tiemposEspera[i] <- 0\n",
+        "      inicioServicio <- llegada\n",
+        "      peluquero2DisponibleEn <- llegada + servicio\n",
+        "      tiemposFinalizacion[i] <- peluquero2DisponibleEn\n",
+        "      peluqueroAsignado[i] <- \"Peluquero 2\"\n",
+        "    } else {\n",
+        "      # Ambos peluqueros están ocupados, el cliente debe esperar\n",
+        "      # Elegir al peluquero que terminará primero\n",
+        "      if (peluquero1DisponibleEn <= peluquero2DisponibleEn) {\n",
+        "        tiemposEspera[i] <- peluquero1DisponibleEn - llegada\n",
+        "        inicioServicio <- peluquero1DisponibleEn\n",
+        "        peluquero1DisponibleEn <- inicioServicio + servicio\n",
+        "        tiemposFinalizacion[i] <- peluquero1DisponibleEn\n",
+        "        peluqueroAsignado[i] <- \"Peluquero 1\"\n",
+        "      } else {\n",
+        "        tiemposEspera[i] <- peluquero2DisponibleEn - llegada\n",
+        "        inicioServicio <- peluquero2DisponibleEn\n",
+        "        peluquero2DisponibleEn <- inicioServicio + servicio\n",
+        "        tiemposFinalizacion[i] <- peluquero2DisponibleEn\n",
+        "        peluqueroAsignado[i] <- \"Peluquero 2\"\n",
+        "      }\n",
+        "    }\n",
+        "  }\n",
+        "\n",
+        "  return(list(\n",
+        "    tiemposEspera = tiemposEspera,\n",
+        "    tiemposFinalizacion = tiemposFinalizacion,\n",
+        "    peluqueroAsignado = peluqueroAsignado\n",
+        "  ))\n",
+        "}\n",
+        "\n"
+      ],
+      "metadata": {
+        "id": "t_ZWMLkpxNAl"
+      },
+      "execution_count": 17,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Ejecutar simulación con 2 peluqueros\n",
+        "resultadosDosPeluqueros <- SimularConDosPeluqueros(\n",
+        "  tiemposLlegadaAbsolutos,\n",
+        "  tiemposDeServicio,\n",
+        "  numClientes\n",
+        ")\n",
+        "\n"
+      ],
+      "metadata": {
+        "id": "3pY6rEwixQXL"
+      },
+      "execution_count": 18,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Paso 6: Simulación con 3 peluqueros\n",
+        "# ---------------------------------\n",
+        "\n",
+        "SimularConTresPeluqueros <- function(tiemposLlegada, tiemposServicio, numClientes) {\n",
+        "  # Inicializar variables\n",
+        "  peluquero1DisponibleEn <- 0\n",
+        "  peluquero2DisponibleEn <- 0\n",
+        "  peluquero3DisponibleEn <- 0\n",
+        "  tiemposEspera <- numeric(numClientes)\n",
+        "  tiemposFinalizacion <- numeric(numClientes)\n",
+        "  peluqueroAsignado <- character(numClientes)\n",
+        "\n",
+        "  # Simular para 3 peluqueros\n",
+        "  for (i in 1:numClientes) {\n",
+        "    llegada <- tiemposLlegada[i]\n",
+        "    servicio <- tiemposServicio[i]\n",
+        "\n",
+        "    # Determinar qué peluquero atenderá al cliente\n",
+        "    if (peluquero1DisponibleEn <= llegada) {\n",
+        "      # El peluquero 1 está libre\n",
+        "      tiemposEspera[i] <- 0\n",
+        "      inicioServicio <- llegada\n",
+        "      peluquero1DisponibleEn <- llegada + servicio\n",
+        "      tiemposFinalizacion[i] <- peluquero1DisponibleEn\n",
+        "      peluqueroAsignado[i] <- \"Peluquero 1\"\n",
+        "    } else if (peluquero2DisponibleEn <= llegada) {\n",
+        "      # El peluquero 2 está libre\n",
+        "      tiemposEspera[i] <- 0\n",
+        "      inicioServicio <- llegada\n",
+        "      peluquero2DisponibleEn <- llegada + servicio\n",
+        "      tiemposFinalizacion[i] <- peluquero2DisponibleEn\n",
+        "      peluqueroAsignado[i] <- \"Peluquero 2\"\n",
+        "    } else if (peluquero3DisponibleEn <= llegada) {\n",
+        "      # El peluquero 3 está libre\n",
+        "      tiemposEspera[i] <- 0\n",
+        "      inicioServicio <- llegada\n",
+        "      peluquero3DisponibleEn <- llegada + servicio\n",
+        "      tiemposFinalizacion[i] <- peluquero3DisponibleEn\n",
+        "      peluqueroAsignado[i] <- \"Peluquero 3\"\n",
+        "    } else {\n",
+        "      # Todos los peluqueros están ocupados\n",
+        "      # Elegir al peluquero que terminará primero\n",
+        "      tiemposDisponibilidad <- c(peluquero1DisponibleEn, peluquero2DisponibleEn, peluquero3DisponibleEn)\n",
+        "      tiempoMin <- min(tiemposDisponibilidad)\n",
+        "      indiceMin <- which.min(tiemposDisponibilidad)\n",
+        "\n",
+        "      tiemposEspera[i] <- tiempoMin - llegada\n",
+        "      inicioServicio <- tiempoMin\n",
+        "\n",
+        "      # Asignar al peluquero disponible primero\n",
+        "      if (indiceMin == 1) {\n",
+        "        peluquero1DisponibleEn <- tiempoMin + servicio\n",
+        "        tiemposFinalizacion[i] <- peluquero1DisponibleEn\n",
+        "        peluqueroAsignado[i] <- \"Peluquero 1\"\n",
+        "      } else if (indiceMin == 2) {\n",
+        "        peluquero2DisponibleEn <- tiempoMin + servicio\n",
+        "        tiemposFinalizacion[i] <- peluquero2DisponibleEn\n",
+        "        peluqueroAsignado[i] <- \"Peluquero 2\"\n",
+        "      } else {\n",
+        "        peluquero3DisponibleEn <- tiempoMin + servicio\n",
+        "        tiemposFinalizacion[i] <- peluquero3DisponibleEn\n",
+        "        peluqueroAsignado[i] <- \"Peluquero 3\"\n",
+        "      }\n",
+        "    }\n",
+        "  }\n",
+        "\n",
+        "  return(list(\n",
+        "    tiemposEspera = tiemposEspera,\n",
+        "    tiemposFinalizacion = tiemposFinalizacion,\n",
+        "    peluqueroAsignado = peluqueroAsignado\n",
+        "  ))\n",
+        "}\n",
+        "\n"
+      ],
+      "metadata": {
+        "id": "XEY4we_IxSoX"
+      },
+      "execution_count": 19,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Ejecutar simulación con 3 peluqueros\n",
+        "resultadosTresPeluqueros <- SimularConTresPeluqueros(\n",
+        "  tiemposLlegadaAbsolutos,\n",
+        "  tiemposDeServicio,\n",
+        "  numClientes\n",
+        ")\n",
+        "\n"
+      ],
+      "metadata": {
+        "id": "iYdWenyRxVqI"
+      },
+      "execution_count": 20,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Paso 7: Comparación de resultados\n",
+        "# -------------------------------\n",
+        "tablaComparativa <- data.frame(\n",
+        "  Cliente = 1:numClientes,\n",
+        "  TiempoLlegada = tiemposLlegadaAbsolutos,\n",
+        "  TiempoServicio = tiemposDeServicio,\n",
+        "  EsperaCon2Peluqueros = resultadosDosPeluqueros$tiemposEspera,\n",
+        "  PeluqueroAsignado2P = resultadosDosPeluqueros$peluqueroAsignado,\n",
+        "  FinalizacionCon2Peluqueros = resultadosDosPeluqueros$tiemposFinalizacion,\n",
+        "  EsperaCon3Peluqueros = resultadosTresPeluqueros$tiemposEspera,\n",
+        "  PeluqueroAsignado3P = resultadosTresPeluqueros$peluqueroAsignado,\n",
+        "  FinalizacionCon3Peluqueros = resultadosTresPeluqueros$tiemposFinalizacion\n",
+        ")\n",
+        "\n",
+        "ImprimirTabla(\"Tabla 4: Comparación de tiempos de espera (primeros 10 clientes)\",\n",
+        "             head(tablaComparativa, 10))\n",
+        "\n"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "rdQdcwewxXbk",
+        "outputId": "eaae8da9-9444-4f9c-fed3-ae4f794a7a18"
+      },
+      "execution_count": 21,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "\n",
+            "\n",
+            " ================================================================================ \n",
+            "🟦 Tabla 4: Comparación de tiempos de espera (primeros 10 clientes) \n",
+            "-------------------------------------------------------------------------------- \n",
+            "\n",
+            "\n",
+            "\n",
+            "| Cliente | TiempoLlegada | TiempoServicio | EsperaCon2Peluqueros | PeluqueroAsignado2P | FinalizacionCon2Peluqueros | EsperaCon3Peluqueros | PeluqueroAsignado3P | FinalizacionCon3Peluqueros |\n",
+            "|:-------:|:-------------:|:--------------:|:--------------------:|:-------------------:|:--------------------------:|:--------------------:|:-------------------:|:--------------------------:|\n",
+            "|    1    |      15       |       30       |          0           |     Peluquero 1     |             45             |          0           |     Peluquero 1     |             45             |\n",
+            "|    2    |      30       |       20       |          0           |     Peluquero 2     |             50             |          0           |     Peluquero 2     |             50             |\n",
+            "|    3    |      39       |       20       |          6           |     Peluquero 1     |             65             |          0           |     Peluquero 3     |             59             |\n",
+            "|    4    |      52       |       20       |          0           |     Peluquero 2     |             72             |          0           |     Peluquero 1     |             72             |\n",
+            "|    5    |      63       |       50       |          2           |     Peluquero 1     |            115             |          0           |     Peluquero 2     |            113             |\n",
+            "|    6    |      74       |       50       |          0           |     Peluquero 2     |            124             |          0           |     Peluquero 1     |            124             |\n",
+            "|    7    |      87       |       30       |          28          |     Peluquero 1     |            145             |          0           |     Peluquero 3     |            117             |\n",
+            "|    8    |      94       |       30       |          30          |     Peluquero 2     |            154             |          19          |     Peluquero 2     |            143             |\n",
+            "|    9    |      107      |       30       |          38          |     Peluquero 1     |            175             |          10          |     Peluquero 3     |            147             |\n",
+            "|   10    |      120      |       10       |          34          |     Peluquero 2     |            164             |          4           |     Peluquero 1     |            134             |\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Paso 8: Análisis de resultados\n",
+        "# ----------------------------\n",
+        "\n",
+        "# Función para calcular estadísticas\n",
+        "CalcularEstadisticas <- function(tiemposEspera, tiemposFinalizacion, tiemposLlegada, numClientes) {\n",
+        "  mediaEspera <- mean(tiemposEspera)\n",
+        "  maxEspera <- max(tiemposEspera)\n",
+        "  clientesQueEsperan <- sum(tiemposEspera > 0)\n",
+        "  porcentajeEspera <- clientesQueEsperan / numClientes * 100\n",
+        "  tiempoTotalServicio <- max(tiemposFinalizacion) - min(tiemposLlegada)\n",
+        "\n",
+        "  return(c(\n",
+        "    MediaEspera = mediaEspera,\n",
+        "    MaxEspera = maxEspera,\n",
+        "    ClientesQueEsperan = clientesQueEsperan,\n",
+        "    PorcentajeEspera = porcentajeEspera,\n",
+        "    TiempoTotalServicio = tiempoTotalServicio\n",
+        "  ))\n",
+        "}\n",
+        "\n"
+      ],
+      "metadata": {
+        "id": "VcvwjdrOxZil"
+      },
+      "execution_count": 22,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Calcular estadísticas para ambas configuraciones\n",
+        "estadisticas2P <- CalcularEstadisticas(\n",
+        "  resultadosDosPeluqueros$tiemposEspera,\n",
+        "  resultadosDosPeluqueros$tiemposFinalizacion,\n",
+        "  tiemposLlegadaAbsolutos,\n",
+        "  numClientes\n",
+        ")\n",
+        "\n",
+        "estadisticas3P <- CalcularEstadisticas(\n",
+        "  resultadosTresPeluqueros$tiemposEspera,\n",
+        "  resultadosTresPeluqueros$tiemposFinalizacion,\n",
+        "  tiemposLlegadaAbsolutos,\n",
+        "  numClientes\n",
+        ")\n",
+        "\n"
+      ],
+      "metadata": {
+        "id": "ckirg7ftxbiD"
+      },
+      "execution_count": 23,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Crear tabla comparativa de resultados\n",
+        "tablaResultados <- data.frame(\n",
+        "  Estadistica = c(\"Tiempo medio de espera (min)\",\n",
+        "                  \"Tiempo máximo de espera (min)\",\n",
+        "                  \"Clientes que esperan\",\n",
+        "                  \"Porcentaje de clientes que esperan (%)\",\n",
+        "                  \"Tiempo total para atender a todos (min)\"),\n",
+        "  Con2Peluqueros = round(estadisticas2P, 2),\n",
+        "  Con3Peluqueros = round(estadisticas3P, 2),\n",
+        "  Diferencia = round(estadisticas2P - estadisticas3P, 2),\n",
+        "  MejoraRelativa = round((estadisticas2P - estadisticas3P) / estadisticas2P * 100, 2)\n",
+        ")\n",
+        "\n"
+      ],
+      "metadata": {
+        "id": "vpp1BUTTxdSR"
+      },
+      "execution_count": 24,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Mejorar presentación de MejoraRelativa\n",
+        "tablaResultados$MejoraRelativa <- ifelse(\n",
+        "  !is.na(tablaResultados$MejoraRelativa) & !is.infinite(tablaResultados$MejoraRelativa),\n",
+        "  paste0(tablaResultados$MejoraRelativa, \"%\"),\n",
+        "  \"N/A\"\n",
+        ")\n",
+        "\n",
+        "ImprimirTabla(\"Tabla 5: Comparación estadística de resultados\", tablaResultados)\n",
+        "\n"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "dUptFAaOxe_6",
+        "outputId": "9bfbb39f-0580-4c19-8656-5772419b2339"
+      },
+      "execution_count": 25,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "\n",
+            "\n",
+            " ================================================================================ \n",
+            "🟦 Tabla 5: Comparación estadística de resultados \n",
+            "-------------------------------------------------------------------------------- \n",
+            "\n",
+            "\n",
+            "\n",
+            "|                    |               Estadistica               | Con2Peluqueros | Con3Peluqueros | Diferencia | MejoraRelativa |\n",
+            "|:-------------------|:---------------------------------------:|:--------------:|:--------------:|:----------:|:--------------:|\n",
+            "|MediaEspera         |      Tiempo medio de espera (min)       |     186.95     |      8.49      |   178.46   |     95.46%     |\n",
+            "|MaxEspera           |      Tiempo máximo de espera (min)      |     395.00     |     41.00      |   354.00   |     89.62%     |\n",
+            "|ClientesQueEsperan  |          Clientes que esperan           |     96.00      |     56.00      |   40.00    |     41.67%     |\n",
+            "|PorcentajeEspera    | Porcentaje de clientes que esperan (%)  |     96.00      |     56.00      |   40.00    |     41.67%     |\n",
+            "|TiempoTotalServicio | Tiempo total para atender a todos (min) |    1460.00     |    1094.00     |   366.00   |     25.07%     |\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Paso 9: Visualización y conclusiones\n",
+        "# ---------------------------------\n",
+        "\n",
+        "# Calcular porcentaje de mejora en tiempo de espera\n",
+        "mejoraPorcentual <- (mean(resultadosDosPeluqueros$tiemposEspera) -\n",
+        "                       mean(resultadosTresPeluqueros$tiemposEspera)) /\n",
+        "  mean(resultadosDosPeluqueros$tiemposEspera) * 100\n",
+        "\n"
+      ],
+      "metadata": {
+        "id": "H3O1Wtm1xgy-"
+      },
+      "execution_count": 26,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Imprimir análisis final con formato mejorado\n",
+        "MostrarAnalisisFinal <- function(mejoraPorcentual, clientes2P, clientes3P) {\n",
+        "  cat(\"\\n\\n\", paste(rep(\"=\", 80), collapse = \"\"), \"\\n\")\n",
+        "  cat(\"📊 ANÁLISIS FINAL\\n\")\n",
+        "  cat(paste(rep(\"-\", 80), collapse = \"\"), \"\\n\\n\")\n",
+        "\n",
+        "  cat(\"La contratación de un tercer peluquero:\\n\\n\")\n",
+        "  cat(\"• Reduciría el tiempo medio de espera en un\", round(mejoraPorcentual, 2), \"%\\n\")\n",
+        "  cat(\"• Disminuiría en\", clientes2P - clientes3P,\n",
+        "      \"la cantidad de clientes que tienen que esperar\\n\\n\")\n",
+        "\n",
+        "  # Determinar recomendación final\n",
+        "  cat(\"✅ RECOMENDACIÓN FINAL:\\n\\n\")\n",
+        "\n",
+        "  if (mejoraPorcentual > 30 && (clientes2P - clientes3P) > 20) {\n",
+        "    cat(\"Contratar un tercer peluquero sería ALTAMENTE beneficioso para reducir\\n\")\n",
+        "    cat(\"los tiempos de espera y mejorar el servicio al cliente.\\n\")\n",
+        "  } else if (mejoraPorcentual > 15) {\n",
+        "    cat(\"Contratar un tercer peluquero sería MODERADAMENTE beneficioso.\\n\")\n",
+        "    cat(\"El propietario debe considerar el costo adicional frente a la mejora en el servicio.\\n\")\n",
+        "  } else {\n",
+        "    cat(\"La mejora con un tercer peluquero es LIMITADA.\\n\")\n",
+        "    cat(\"Probablemente no sea rentable contratar un tercer peluquero en este momento.\\n\")\n",
+        "  }\n",
+        "}"
+      ],
+      "metadata": {
+        "id": "4Lg7esTExiSv"
+      },
+      "execution_count": 27,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Mostrar análisis final\n",
+        "MostrarAnalisisFinal(\n",
+        "  mejoraPorcentual,\n",
+        "  sum(resultadosDosPeluqueros$tiemposEspera > 0),\n",
+        "  sum(resultadosTresPeluqueros$tiemposEspera > 0)\n",
+        ")"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "OQc6AzIZxkMd",
+        "outputId": "380ea938-54b9-4fd0-b0c5-33a4223b068b"
+      },
+      "execution_count": 28,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "\n",
+            "\n",
+            " ================================================================================ \n",
+            "📊 ANÁLISIS FINAL\n",
+            "-------------------------------------------------------------------------------- \n",
+            "\n",
+            "La contratación de un tercer peluquero:\n",
+            "\n",
+            "• Reduciría el tiempo medio de espera en un 95.46 %\n",
+            "• Disminuiría en 40 la cantidad de clientes que tienen que esperar\n",
+            "\n",
+            "✅ RECOMENDACIÓN FINAL:\n",
+            "\n",
+            "Contratar un tercer peluquero sería ALTAMENTE beneficioso para reducir\n",
+            "los tiempos de espera y mejorar el servicio al cliente.\n"
+          ]
+        }
+      ]
+    }
+  ]
+}
